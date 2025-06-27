@@ -55,13 +55,13 @@ const Home: React.FC = () => {
                      sx={{
                         display: 'block',
                         textOverflow: 'ellipsis',
-                        // overflow: 'hidden',
-                        // whiteSpace: 'nowrap',
-                        // transition:'all 0.3 ease',
-                        // '&:hover':{
-                        //   whiteSpace: 'normal',
-                        //   textOverflow: 'clip'
-                        // }
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        transition:'all 0.3 ease',
+                        '&:hover':{
+                          whiteSpace: 'normal',
+                          textOverflow: 'clip'
+                        }
                      }}
                     >
                       {anime.title}
