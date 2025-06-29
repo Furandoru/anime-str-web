@@ -17,6 +17,7 @@ import type { SelectChangeEvent } from '@mui/material';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { fetchPopularAnime } from '../../api/jikan';
+import UserDashboard from '../../components/UserDashboard';
 
 // Memoized Anime Card Component for better performance
 const AnimeCard = memo(({ anime, index }: { anime: any; index: number }) => {
@@ -166,6 +167,9 @@ const Home: React.FC = () => {
       minHeight: '100vh',
       backgroundColor: theme.palette.background.default
     }}>
+      {/* User Dashboard */}
+      <UserDashboard />
+      
       {/* Page Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" sx={{ 

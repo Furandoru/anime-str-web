@@ -19,12 +19,14 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../theme/ThemeProvider';
+import { useAuth } from '../../context/AuthContext';
 
 const Topbar: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const theme = useMuiTheme();
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -38,6 +40,17 @@ const Topbar: React.FC = () => {
   const handleUserClick = () => {
     handleClose();
     navigate('/profile');
+  };
+
+  const handleLogout = () => {
+    handleClose();
+    logout();
+    navigate('/login');
+  };
+
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    return user.username.charAt(0).toUpperCase();
   };
 
   return (
@@ -117,8 +130,8 @@ const Topbar: React.FC = () => {
         {/* User Avatar with Dropdown */}
         <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={handleClick}>
           <Avatar 
-            alt="User" 
-            src="" 
+            alt={user?.username || 'User'} 
+            src={user?.avatar || ''} 
             sx={{ 
               bgcolor: theme.palette.primary.main, 
               width: 40, 
@@ -128,10 +141,10 @@ const Topbar: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            U
+            {getUserInitials()}
           </Avatar>
           <Typography variant="body2" sx={{ mr: 1, fontWeight: 500, color: theme.palette.text.primary }}>
-            User
+            {user?.username || 'User'}
           </Typography>
           <KeyboardArrowDownRoundedIcon sx={{ color: theme.palette.text.secondary }} />
         </Box>
@@ -155,10 +168,10 @@ const Topbar: React.FC = () => {
         >
           <MenuItem onClick={handleUserClick} sx={{ py: 1.5 }}>
             <PersonRoundedIcon sx={{ mr: 2, color: theme.palette.text.secondary }} />
-            <Typography sx={{ color: theme.palette.text.primary }}>User</Typography>
+            <Typography sx={{ color: theme.palette.text.primary }}>Profile</Typography>
           </MenuItem>
           <Divider />
-          <MenuItem onClick={handleClose} sx={{ py: 1.5, color: '#d32f2f' }}>
+          <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: '#d32f2f' }}>
             <LogoutRoundedIcon sx={{ mr: 2, color: '#d32f2f' }} />
             <Typography>Logout</Typography>
           </MenuItem>
