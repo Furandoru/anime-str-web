@@ -54,7 +54,8 @@ const Register: React.FC = () => {
         setError('Registration failed. Please try again.');
       }
     } catch (err) {
-      setError('An error occurred during registration');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during registration. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

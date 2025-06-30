@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { loginUser, registerUser, getAuthToken, setAuthToken, removeAuthToken } from '../api/backend';
 
 export interface User {
   id: string;
@@ -24,6 +25,7 @@ interface AuthContextType {
   logout: () => void;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   updateUser: (updates: Partial<User>) => void;
+  updateAvatar: (avatarUrl: string) => void;
   addToWatchlist: (animeId: string) => void;
   removeFromWatchlist: (animeId: string) => void;
   addToFavorites: (animeId: string) => void;
@@ -52,12 +54,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Load user from localStorage on app start
   useEffect(() => {
     const savedUser = localStorage.getItem('anime_user');
-    if (savedUser) {
+    const token = getAuthToken();
+    
+    if (savedUser && token) {
       try {
         setUser(JSON.parse(savedUser));
       } catch (error) {
         console.error('Error parsing saved user:', error);
         localStorage.removeItem('anime_user');
+        removeAuthToken();
       }
     }
     setIsLoading(false);
@@ -69,56 +74,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('anime_user', JSON.stringify(user));
     } else {
       localStorage.removeItem('anime_user');
+      removeAuthToken();
     }
   }, [user]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await loginUser({ email, password });
       
-      // Mock authentication - in real app, this would be an API call
-      if (email === 'demo@example.com' && password === 'password') {
-        const mockUser: User = {
-          id: '1',
-          username: 'DemoUser',
-          email: 'demo@example.com',
-          avatar: '',
-          preferences: {
-            theme: 'dark',
-            language: 'en',
-            notifications: true,
-          },
-          watchlist: [],
-          favorites: [],
-          watchHistory: [],
-        };
-        setUser(mockUser);
-        return true;
-      } else {
-        throw new Error('Invalid credentials');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Store the token
+      setAuthToken(response.access_token);
       
-      // Mock registration - in real app, this would be an API call
-      const newUser: User = {
-        id: Date.now().toString(),
-        username,
-        email,
-        avatar: '',
+      // Convert backend user format to frontend format
+      const userData: User = {
+        id: response.user.id,
+        username: response.user.username,
+        email: response.user.email,
+        avatar: response.user.avatar || '',
         preferences: {
           theme: 'dark',
           language: 'en',
@@ -128,10 +101,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         favorites: [],
         watchHistory: [],
       };
-      setUser(newUser);
+      
+      setUser(userData);
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      // Don't throw here, let the component handle the error
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const response = await registerUser({ username, email, password });
+      
+      // Store the token
+      setAuthToken(response.access_token);
+      
+      // Convert backend user format to frontend format
+      const userData: User = {
+        id: response.user.id,
+        username: response.user.username,
+        email: response.user.email,
+        avatar: response.user.avatar || '',
+        preferences: {
+          theme: 'dark',
+          language: 'en',
+          notifications: true,
+        },
+        watchlist: [],
+        favorites: [],
+        watchHistory: [],
+      };
+      
+      setUser(userData);
       return true;
     } catch (error) {
       console.error('Registration error:', error);
+      // Don't throw here, let the component handle the error
       return false;
     } finally {
       setIsLoading(false);
@@ -140,11 +150,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    removeAuthToken();
   };
 
   const updateUser = (updates: Partial<User>) => {
     if (user) {
       setUser({ ...user, ...updates });
+    }
+  };
+
+  const updateAvatar = (avatarUrl: string) => {
+    if (user) {
+      setUser({ ...user, avatar: avatarUrl });
     }
   };
 
@@ -173,9 +190,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const addToHistory = (animeId: string) => {
-    if (user) {
-      const newHistory = [animeId, ...user.watchHistory.filter(id => id !== animeId)].slice(0, 100);
-      setUser({ ...user, watchHistory: newHistory });
+    if (user && !user.watchHistory.includes(animeId)) {
+      setUser({ ...user, watchHistory: [...user.watchHistory, animeId] });
     }
   };
 
@@ -187,6 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     register,
     updateUser,
+    updateAvatar,
     addToWatchlist,
     removeFromWatchlist,
     addToFavorites,

@@ -61,14 +61,26 @@ const Topbar: React.FC = () => {
       alignItems: 'center', 
       px: 3,
       width: '100%',
+      maxWidth: '100%',
       backgroundColor: theme.palette.background.paper,
       borderBottom: `1px solid ${theme.palette.divider}`,
       boxShadow: theme.palette.mode === 'dark' 
         ? '0 1px 3px rgba(0,0,0,0.3)' 
-        : '0 1px 3px rgba(0,0,0,0.1)'
+        : '0 1px 3px rgba(0,0,0,0.1)',
+      overflow: 'hidden'
     }}>
       {/* Left: Topbar Icon and Title */}
-      <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 'fit-content' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        minWidth: 'fit-content',
+        flexShrink: 0,
+        cursor: 'pointer',
+        '&:hover': {
+          opacity: 0.8,
+          transition: 'opacity 0.2s ease-in-out'
+        }
+      }} onClick={() => navigate('/')}>
         <NightsStayRoundedIcon sx={{ fontSize: 32, marginRight: 2, color: theme.palette.primary.main }} />
         <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
           AzukiCloud
@@ -77,33 +89,102 @@ const Topbar: React.FC = () => {
       
       {/* Center: Search Bar */}
       <Box sx={{ 
-        display: 'flex', 
+        display: { xs: 'none', md: 'flex' }, // Hide on small screens
         alignItems: 'center', 
-        background: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa', 
+        background: theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)'
+          : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
         borderRadius: 3, 
         px: 3, 
-        mx: 4, 
+        mx: { xs: 1, md: 4 }, 
         flex: 1, 
         maxWidth: 600,
-        minWidth: 400,
-        border: `1px solid ${theme.palette.divider}`,
+        minWidth: 200,
+        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
+        backdropFilter: 'blur(10px)',
+        transition: 'all 0.3s ease-in-out',
+        position: 'relative',
+        overflow: 'hidden',
         '&:hover': {
           border: `1px solid ${theme.palette.primary.main}`,
-          boxShadow: `0 0 0 2px ${theme.palette.primary.main}20`
+          boxShadow: `0 0 0 3px ${theme.palette.primary.main}15`,
+          transform: 'translateY(-1px)',
+        },
+        '&:focus-within': {
+          border: `1px solid ${theme.palette.primary.main}`,
+          boxShadow: `0 0 0 3px ${theme.palette.primary.main}25`,
+          transform: 'translateY(-1px)',
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+          opacity: 0,
+          transition: 'opacity 0.3s ease-in-out',
+          zIndex: -1,
+        },
+        '&:hover::before': {
+          opacity: 0.05,
         }
       }}>
-        <SearchIcon sx={{ color: theme.palette.text.secondary, mr: 2, fontSize: 20 }} />
+        <SearchIcon sx={{ 
+          color: theme.palette.text.secondary, 
+          mr: 2, 
+          fontSize: 20,
+          transition: 'color 0.3s ease-in-out',
+          '&:hover': {
+            color: theme.palette.primary.main,
+          }
+        }} />
         <InputBase 
           placeholder="Search anime, movies, TV shows..." 
           sx={{ 
             width: '100%', 
             fontSize: '15px',
             color: theme.palette.text.primary,
+            fontWeight: 500,
             '& input': {
-              color: theme.palette.text.primary
+              color: theme.palette.text.primary,
+              '&::placeholder': {
+                color: theme.palette.text.secondary,
+                opacity: 0.7,
+                fontWeight: 400,
+              },
+              '&:focus::placeholder': {
+                opacity: 0.5,
+              }
+            },
+            '& .MuiInputBase-input': {
+              padding: '12px 0',
             }
           }} 
         />
+        {/* Search suggestions indicator */}
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          ml: 2,
+          opacity: 0.6,
+          transition: 'opacity 0.3s ease-in-out',
+          '&:hover': {
+            opacity: 1,
+          }
+        }}>
+          <Typography variant="caption" sx={{ 
+            color: theme.palette.text.secondary,
+            fontSize: '11px',
+            fontWeight: 500,
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase'
+          }}>
+            ⌘K
+          </Typography>
+        </Box>
       </Box>
       
       {/* Right: Dark Mode Toggle and User Avatar */}
@@ -112,42 +193,93 @@ const Topbar: React.FC = () => {
         alignItems: 'center', 
         minWidth: 'fit-content',
         ml: 'auto',
-        gap: 1
+        gap: 1,
+        flexShrink: 0
       }}>
+        {/* Mobile Search Button */}
+        <IconButton
+          sx={{ 
+            display: { xs: 'flex', md: 'none' },
+            color: theme.palette.text.primary,
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.1)' 
+              : 'rgba(0,0,0,0.05)',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            transition: 'all 0.3s ease-in-out',
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255,255,255,0.15)' 
+                : 'rgba(0,0,0,0.1)',
+              border: `1px solid ${theme.palette.primary.main}`,
+              transform: 'scale(1.05)',
+              boxShadow: `0 0 0 3px ${theme.palette.primary.main}15`,
+            }
+          }}
+        >
+          <SearchIcon />
+        </IconButton>
+
         {/* Dark Mode Toggle */}
         <IconButton
           onClick={toggleTheme}
           sx={{ 
             color: theme.palette.text.primary,
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.1)' 
+              : 'rgba(0,0,0,0.05)',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            transition: 'all 0.3s ease-in-out',
             '&:hover': {
-              backgroundColor: theme.palette.action.hover
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255,255,255,0.15)' 
+                : 'rgba(0,0,0,0.1)',
+              border: `1px solid ${theme.palette.primary.main}`,
+              transform: 'scale(1.05)',
+              boxShadow: `0 0 0 3px ${theme.palette.primary.main}15`,
             }
           }}
         >
           {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
         </IconButton>
 
-        {/* User Avatar with Dropdown */}
-        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={handleClick}>
+        {/* User Avatar */}
+        <IconButton
+          onClick={handleClick}
+          sx={{ 
+            p: 0.5,
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.1)' 
+              : 'rgba(0,0,0,0.05)',
+            border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            transition: 'all 0.3s ease-in-out',
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255,255,255,0.15)' 
+                : 'rgba(0,0,0,0.1)',
+              border: `2px solid ${theme.palette.primary.main}`,
+              transform: 'scale(1.05)',
+            }
+          }}
+        >
           <Avatar 
-            alt={user?.username || 'User'} 
-            src={user?.avatar || ''} 
+            src={user?.avatar} 
+            alt={user?.username || 'User'}
             sx={{ 
-              bgcolor: theme.palette.primary.main, 
-              width: 40, 
-              height: 40,
-              mr: 1,
-              fontSize: '16px',
-              fontWeight: 'bold'
+              width: 36, 
+              height: 36,
+              background: user?.avatar 
+                ? 'transparent' 
+                : 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+              fontSize: '14px',
+              fontWeight: 600,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 2px 8px rgba(0,0,0,0.3)' 
+                : '0 2px 8px rgba(0,0,0,0.1)',
             }}
           >
-            {getUserInitials()}
+            {user?.username?.charAt(0).toUpperCase() || 'U'}
           </Avatar>
-          <Typography variant="body2" sx={{ mr: 1, fontWeight: 500, color: theme.palette.text.primary }}>
-            {user?.username || 'User'}
-          </Typography>
-          <KeyboardArrowDownRoundedIcon sx={{ color: theme.palette.text.secondary }} />
-        </Box>
+        </IconButton>
         
         {/* Dropdown Menu */}
         <Menu

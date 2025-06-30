@@ -4,8 +4,10 @@ import { Home } from "./Pages/Home/Home";
 import { Profile } from "./Pages/Home/Profile";
 import { Settings } from "./Pages/Home/Settings";
 import { About } from "./Pages/Home/About";
+import { History } from "./Pages/Home/History";
 import AnimeDetail from "./Pages/Home/AnimeDetail";
 import Genres from "./Pages/Home/Genres";
+import Favorites from "./Pages/Home/Favorites";
 import Login from "./Pages/Auth/Login";
 import Register from "./Pages/Auth/Register";
 import MainLayout from './Pages/Layouts/MainLayout';
@@ -63,14 +65,14 @@ const App: React.FC = () => {
             <Route path="/favorites" element={
               <ProtectedRoute>
                 <MainLayout>
-                  <div>Favorites Page (Coming Soon)</div>
+                  <Favorites />
                 </MainLayout>
               </ProtectedRoute>
             } />
             <Route path="/history" element={
               <ProtectedRoute>
                 <MainLayout>
-                  <div>History Page (Coming Soon)</div>
+                  <History />
                 </MainLayout>
               </ProtectedRoute>
             } />

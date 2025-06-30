@@ -37,28 +37,11 @@ const Login: React.FC = () => {
       if (success) {
         navigate('/');
       } else {
-        setError('Invalid email or password. Try demo@example.com / password');
+        setError('Invalid email or password. Please try again.');
       }
     } catch (err) {
-      setError('An error occurred during login');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setEmail('demo@example.com');
-    setPassword('password');
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const success = await login('demo@example.com', 'password');
-      if (success) {
-        navigate('/');
-      }
-    } catch (err) {
-      setError('An error occurred during login');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +138,7 @@ const Login: React.FC = () => {
             size="large"
             disabled={isLoading}
             sx={{ 
-              mb: 2, 
+              mb: 3, 
               py: 1.5, 
               borderRadius: 2,
               textTransform: 'none',
@@ -164,23 +147,6 @@ const Login: React.FC = () => {
             }}
           >
             {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
-          </Button>
-
-          <Button
-            fullWidth
-            variant="outlined"
-            size="large"
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            sx={{ 
-              mb: 3, 
-              py: 1.5, 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontSize: '16px'
-            }}
-          >
-            Try Demo Account
           </Button>
         </form>
 

@@ -12,16 +12,32 @@ import {
   MenuItem,
   CircularProgress,
   Alert,
+  IconButton,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
+import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { fetchPopularAnime } from '../../api/jikan';
 import UserDashboard from '../../components/UserDashboard';
+import { useAuth } from '../../context/AuthContext';
 
 // Memoized Anime Card Component for better performance
 const AnimeCard = memo(({ anime, index }: { anime: any; index: number }) => {
   const theme = useTheme();
+  const { user, addToFavorites, removeFromFavorites } = useAuth();
+  const isFavorite = user?.favorites.includes(anime.mal_id.toString());
+
+  const handleFavoriteToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isFavorite) {
+      removeFromFavorites(anime.mal_id.toString());
+    } else {
+      addToFavorites(anime.mal_id.toString());
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -55,6 +71,7 @@ const AnimeCard = memo(({ anime, index }: { anime: any; index: number }) => {
             transition: 'all 0.2s ease-in-out',
             cursor: 'pointer',
             overflow: 'hidden',
+            position: 'relative',
             '&:hover': {
               transform: 'translateY(-4px)',
               boxShadow: theme.palette.mode === 'dark' 
@@ -66,6 +83,24 @@ const AnimeCard = memo(({ anime, index }: { anime: any; index: number }) => {
             },
           }}
         >
+          {/* Favorite button */}
+          <IconButton
+            onClick={handleFavoriteToggle}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              color: isFavorite ? '#ff4081' : 'white',
+              zIndex: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.8)',
+              }
+            }}
+          >
+            {isFavorite ? <Favorite /> : <FavoriteBorder />}
+          </IconButton>
+
           <Box sx={{ 
             height: '280px', 
             overflow: 'hidden',

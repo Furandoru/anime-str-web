@@ -39,42 +39,78 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     palette: {
       mode: isDarkMode ? 'dark' : 'light',
       primary: {
-        main: '#1976d2',
-        light: '#42a5f5',
-        dark: '#1565c0',
+        main: '#1d9bf0', // Twitter blue
+        light: '#4db5f7',
+        dark: '#0c7abf',
       },
       secondary: {
-        main: '#dc004e',
-        light: '#ff5983',
-        dark: '#9a0036',
+        main: '#f91880', // Twitter pink
+        light: '#ff4da6',
+        dark: '#d1005a',
       },
       background: {
-        default: isDarkMode ? '#121212' : '#f8f9fa',
-        paper: isDarkMode ? '#1e1e1e' : '#ffffff',
+        default: isDarkMode ? '#15202b' : '#f8f9fa', // Twitter dim background
+        paper: isDarkMode ? '#192734' : '#ffffff', // Twitter dim card background
       },
       text: {
         primary: isDarkMode ? '#ffffff' : '#333333',
-        secondary: isDarkMode ? '#b0b0b0' : '#666666',
+        secondary: isDarkMode ? '#8899a6' : '#666666', // Twitter dim text color
       },
+      divider: isDarkMode ? '#38444d' : '#e0e0e0', // Twitter dim border color
     },
     components: {
       MuiCard: {
         styleOverrides: {
           root: {
-            backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff',
+            backgroundColor: isDarkMode ? '#192734' : '#ffffff',
             boxShadow: isDarkMode 
-              ? '0 4px 20px rgba(0,0,0,0.3)' 
+              ? '0 4px 20px rgba(0,0,0,0.2)' 
               : '0 4px 20px rgba(0,0,0,0.1)',
+            border: isDarkMode ? '1px solid #38444d' : '1px solid #e0e0e0',
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDarkMode ? '#1e1e1e' : '#ffffff',
+            backgroundColor: isDarkMode ? '#192734' : '#ffffff',
             borderBottom: isDarkMode 
-              ? '1px solid #333333' 
+              ? '1px solid #38444d' 
               : '1px solid #e0e0e0',
+          },
+        },
+      },
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            backgroundColor: isDarkMode ? '#192734' : '#ffffff',
+            borderRight: isDarkMode ? '1px solid #38444d' : '1px solid #e0e0e0',
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            '&.MuiButton-outlined': {
+              borderColor: isDarkMode ? '#38444d' : '#e0e0e0',
+              '&:hover': {
+                borderColor: isDarkMode ? '#8899a6' : '#999999',
+              },
+            },
+          },
+        },
+      },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: isDarkMode ? '#38444d' : '#e0e0e0',
+              },
+              '&:hover fieldset': {
+                borderColor: isDarkMode ? '#8899a6' : '#999999',
+              },
+            },
           },
         },
       },

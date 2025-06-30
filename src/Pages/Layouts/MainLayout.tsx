@@ -5,26 +5,39 @@ import Topbar from '../Components/Topbar';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Auto-hiding Sidebar on the left */}
-      <Box sx={{ 
-        width: { xs: 0, sm: '16px' },
-        transition: 'width 0.3s ease',
-        '&:hover': {
-          width: { xs: 0, sm: '64px' }
-        }
-      }}>
-        <Sidebar />
-      </Box>
+    <Box sx={{ 
+      display: 'flex', 
+      minHeight: '100vh',
+      width: '100%',
+      overflow: 'hidden'
+    }}>
+      {/* Floating centered sidebar */}
+      <Sidebar />
       
       {/* Topbar + content */}
-      <Box sx={{ flexGrow: 1 }}>
+      <Box sx={{ 
+        flexGrow: 1,
+        width: '100%',
+        overflow: 'hidden'
+      }}>
         {/* Topbar */}
-        <Box sx={{ height: '64px', display: 'flex', alignItems: 'center', paddingLeft: 2 }}>
+        <Box sx={{ 
+          height: '64px', 
+          display: 'flex', 
+          alignItems: 'center',
+          width: '100%'
+        }}>
           <Topbar />
         </Box>
         {/* Page Content */}
-        <Box sx={{ padding: 2 }}>
+        <Box sx={{ 
+          width: '100%',
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '0px',
+            background: 'transparent'
+          }
+        }}>
           {children}
         </Box>
       </Box>

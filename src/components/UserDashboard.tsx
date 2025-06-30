@@ -5,7 +5,8 @@ import {
   CardContent,
   Typography,
   Button,
-  useTheme
+  useTheme,
+  Avatar,
 } from '@mui/material';
 import {
   Favorite as FavoriteIcon,
@@ -50,9 +51,35 @@ const UserDashboard: React.FC = () => {
 
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold', color: theme.palette.text.primary }}>
-        Welcome back, {user.username}! 👋
-      </Typography>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2, 
+        mb: 3 
+      }}>
+        <Avatar
+          src={user.avatar}
+          sx={{
+            width: 60,
+            height: 60,
+            fontSize: '24px',
+            fontWeight: 'bold',
+            background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+            border: `3px solid ${theme.palette.background.paper}`,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          }}
+        >
+          {user.username.charAt(0).toUpperCase()}
+        </Avatar>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
+            Welcome back, {user.username}! 👋
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Ready to discover more amazing anime?
+          </Typography>
+        </Box>
+      </Box>
       
       <Box sx={{ 
         display: 'grid', 

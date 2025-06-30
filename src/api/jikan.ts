@@ -11,3 +11,11 @@ export async function fetchPopularAnime(page = 1) {
   const data = await res.json();
   return data.data; // array of anime
 } 
+
+export async function fetchAnimeById(id: string) {
+  const res = await fetch(`https://api.jikan.moe/v4/anime/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch anime details');
+  const data = await res.json();
+  return data.data; // single anime object
+}
+
