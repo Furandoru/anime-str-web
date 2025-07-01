@@ -20,6 +20,13 @@ export interface AuthResponse {
     email: string;
     avatar: string;
     role: string;
+    preferences: {
+      theme: 'light' | 'dark';
+      language: string;
+      notifications: boolean;
+    };
+    favorites: string[];
+    watchlist: string[];
   };
 }
 
@@ -133,4 +140,150 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     }
     throw error;
   }
-} 
+}
+
+export const updateAvatar = async (avatar: string): Promise<{ avatar: string }> => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ avatar }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to update avatar');
+  }
+
+  return response.json();
+};
+
+export const updatePreferences = async (preferences: {
+  theme?: 'light' | 'dark';
+  language?: string;
+  notifications?: boolean;
+}) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/preferences`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(preferences),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to update preferences');
+  }
+
+  return response.json();
+};
+
+export const updateUserData = async (userData: {
+  favorites?: string[];
+  watchlist?: string[];
+}) => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/user-data`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(userData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to update user data');
+  }
+
+  return response.json();
+};
+
+export const getUserData = async () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/user-data`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to get user data');
+  }
+
+  return response.json();
+};
+
+// Reset password functions
+export const requestResetPassword = async (email: string): Promise<{ message: string }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/request-reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
+      throw new Error(errorData.message || 'Request failed');
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};
+
+export const resetPassword = async (token: string, newPassword: string): Promise<{ message: string }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token, newPassword }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Reset failed' }));
+      throw new Error(errorData.message || 'Reset failed');
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+}; 

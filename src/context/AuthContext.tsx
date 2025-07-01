@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { loginUser, registerUser, getAuthToken, setAuthToken, removeAuthToken } from '../api/backend';
+import { loginUser, registerUser, getAuthToken, setAuthToken, removeAuthToken, updateAvatar, updatePreferences, updateUserData, getUserData } from '../api/backend';
 
 export interface User {
   id: string;
@@ -12,9 +12,8 @@ export interface User {
     language: string;
     notifications: boolean;
   };
-  watchlist: string[];
   favorites: string[];
-  watchHistory: string[];
+  watchlist: string[];
 }
 
 interface AuthContextType {
@@ -26,11 +25,12 @@ interface AuthContextType {
   register: (username: string, email: string, password: string) => Promise<boolean>;
   updateUser: (updates: Partial<User>) => void;
   updateAvatar: (avatarUrl: string) => void;
-  addToWatchlist: (animeId: string) => void;
-  removeFromWatchlist: (animeId: string) => void;
+  updateUserPreferences: (preferences: Partial<User['preferences']>) => void;
   addToFavorites: (animeId: string) => void;
   removeFromFavorites: (animeId: string) => void;
-  addToHistory: (animeId: string) => void;
+  addToWatchlist: (animeId: string) => void;
+  removeFromWatchlist: (animeId: string) => void;
+  syncUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,30 +53,85 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Load user from localStorage on app start
   useEffect(() => {
-    const savedUser = localStorage.getItem('anime_user');
-    const token = getAuthToken();
-    
-    if (savedUser && token) {
+    const initializeUser = async () => {
       try {
-        setUser(JSON.parse(savedUser));
+        const savedUser = localStorage.getItem('anime_user');
+        const token = getAuthToken();
+        
+        if (savedUser && token) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            const userWithDefaults = {
+              ...parsedUser,
+              favorites: parsedUser.favorites || [],
+              watchlist: parsedUser.watchlist || [],
+              preferences: parsedUser.preferences || { theme: 'dark', language: 'en', notifications: true },
+            };
+            setUser(userWithDefaults);
+            
+            // Try to sync with backend, but don't fail if it doesn't work
+            try {
+              const userData = await getUserData();
+              setUser({
+                id: userData.id,
+                username: userData.username,
+                email: userData.email,
+                avatar: userData.avatar || '',
+                preferences: userData.preferences || { theme: 'dark', language: 'en', notifications: true },
+                favorites: userData.favorites || [],
+                watchlist: userData.watchlist || [],
+              });
+            } catch (syncError) {
+              console.warn('Failed to sync with backend, using local data:', syncError);
+              // Keep using the local data if sync fails
+            }
+          } catch (parseError) {
+            console.error('Error parsing saved user:', parseError);
+            localStorage.removeItem('anime_user');
+            removeAuthToken();
+          }
+        }
       } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('anime_user');
-        removeAuthToken();
+        console.error('Error during user initialization:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    initializeUser();
   }, []);
 
   // Save user to localStorage whenever user changes
   useEffect(() => {
     if (user) {
-      localStorage.setItem('anime_user', JSON.stringify(user));
+      try {
+        localStorage.setItem('anime_user', JSON.stringify(user));
+      } catch (error) {
+        console.error('Error saving user to localStorage:', error);
+      }
     } else {
       localStorage.removeItem('anime_user');
       removeAuthToken();
     }
   }, [user]);
+
+  const syncUserData = async () => {
+    try {
+      const userData = await getUserData();
+      setUser({
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        avatar: userData.avatar || '',
+        preferences: userData.preferences || { theme: 'dark', language: 'en', notifications: true },
+        favorites: userData.favorites || [],
+        watchlist: userData.watchlist || [],
+      });
+    } catch (error) {
+      console.error('Error syncing user data:', error);
+      throw error; // Re-throw so calling code can handle it
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -92,21 +147,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         username: response.user.username,
         email: response.user.email,
         avatar: response.user.avatar || '',
-        preferences: {
-          theme: 'dark',
-          language: 'en',
-          notifications: true,
-        },
-        watchlist: [],
-        favorites: [],
-        watchHistory: [],
+        preferences: response.user.preferences,
+        favorites: response.user.favorites || [],
+        watchlist: response.user.watchlist || [],
       };
       
       setUser(userData);
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      // Don't throw here, let the component handle the error
       return false;
     } finally {
       setIsLoading(false);
@@ -127,21 +176,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         username: response.user.username,
         email: response.user.email,
         avatar: response.user.avatar || '',
-        preferences: {
-          theme: 'dark',
-          language: 'en',
-          notifications: true,
-        },
-        watchlist: [],
-        favorites: [],
-        watchHistory: [],
+        preferences: response.user.preferences,
+        favorites: response.user.favorites || [],
+        watchlist: response.user.watchlist || [],
       };
       
       setUser(userData);
       return true;
     } catch (error) {
       console.error('Registration error:', error);
-      // Don't throw here, let the component handle the error
       return false;
     } finally {
       setIsLoading(false);
@@ -159,39 +202,103 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateAvatar = (avatarUrl: string) => {
+  const updateAvatar = async (avatarUrl: string) => {
     if (user) {
-      setUser({ ...user, avatar: avatarUrl });
+      try {
+        // Update in backend
+        await updateAvatar(avatarUrl);
+        // Update local state
+        setUser({ ...user, avatar: avatarUrl });
+      } catch (error) {
+        console.error('Error updating avatar:', error);
+        // Still update locally even if backend fails
+        setUser({ ...user, avatar: avatarUrl });
+      }
     }
   };
 
-  const addToWatchlist = (animeId: string) => {
-    if (user && !user.watchlist.includes(animeId)) {
-      setUser({ ...user, watchlist: [...user.watchlist, animeId] });
-    }
-  };
-
-  const removeFromWatchlist = (animeId: string) => {
+  const updateUserPreferences = async (preferences: Partial<User['preferences']>) => {
     if (user) {
-      setUser({ ...user, watchlist: user.watchlist.filter(id => id !== animeId) });
+      try {
+        // Update in backend
+        await updatePreferences(preferences);
+        // Update local state
+        setUser({
+          ...user,
+          preferences: { ...user.preferences, ...preferences }
+        });
+      } catch (error) {
+        console.error('Error updating preferences:', error);
+        // Still update locally even if backend fails
+        setUser({
+          ...user,
+          preferences: { ...user.preferences, ...preferences }
+        });
+      }
     }
   };
 
-  const addToFavorites = (animeId: string) => {
+  const addToFavorites = async (animeId: string) => {
     if (user && !user.favorites.includes(animeId)) {
-      setUser({ ...user, favorites: [...user.favorites, animeId] });
+      const newFavorites = [...user.favorites, animeId];
+      try {
+        // Update in backend
+        await updateUserData({ favorites: newFavorites });
+        // Update local state
+        setUser({ ...user, favorites: newFavorites });
+      } catch (error) {
+        console.error('Error updating favorites:', error);
+        // Still update locally even if backend fails
+        setUser({ ...user, favorites: newFavorites });
+      }
     }
   };
 
-  const removeFromFavorites = (animeId: string) => {
+  const removeFromFavorites = async (animeId: string) => {
     if (user) {
-      setUser({ ...user, favorites: user.favorites.filter(id => id !== animeId) });
+      const newFavorites = user.favorites.filter(id => id !== animeId);
+      try {
+        // Update in backend
+        await updateUserData({ favorites: newFavorites });
+        // Update local state
+        setUser({ ...user, favorites: newFavorites });
+      } catch (error) {
+        console.error('Error updating favorites:', error);
+        // Still update locally even if backend fails
+        setUser({ ...user, favorites: newFavorites });
+      }
     }
   };
 
-  const addToHistory = (animeId: string) => {
-    if (user && !user.watchHistory.includes(animeId)) {
-      setUser({ ...user, watchHistory: [...user.watchHistory, animeId] });
+  const addToWatchlist = async (animeId: string) => {
+    if (user && !user.watchlist.includes(animeId)) {
+      const newWatchlist = [...user.watchlist, animeId];
+      try {
+        // Update in backend
+        await updateUserData({ watchlist: newWatchlist });
+        // Update local state
+        setUser({ ...user, watchlist: newWatchlist });
+      } catch (error) {
+        console.error('Error updating watchlist:', error);
+        // Still update locally even if backend fails
+        setUser({ ...user, watchlist: newWatchlist });
+      }
+    }
+  };
+
+  const removeFromWatchlist = async (animeId: string) => {
+    if (user) {
+      const newWatchlist = user.watchlist.filter(id => id !== animeId);
+      try {
+        // Update in backend
+        await updateUserData({ watchlist: newWatchlist });
+        // Update local state
+        setUser({ ...user, watchlist: newWatchlist });
+      } catch (error) {
+        console.error('Error updating watchlist:', error);
+        // Still update locally even if backend fails
+        setUser({ ...user, watchlist: newWatchlist });
+      }
     }
   };
 
@@ -204,11 +311,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     updateUser,
     updateAvatar,
-    addToWatchlist,
-    removeFromWatchlist,
+    updateUserPreferences,
     addToFavorites,
     removeFromFavorites,
-    addToHistory,
+    addToWatchlist,
+    removeFromWatchlist,
+    syncUserData,
   };
 
   return (

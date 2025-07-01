@@ -7,11 +7,9 @@ import {
   Typography,
   useTheme,
   IconButton,
-  Grid,
   Alert,
   CircularProgress,
   Chip,
-  Tooltip,
 } from '@mui/material';
 import { Favorite, FavoriteBorder, Delete } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,18 +28,11 @@ const FavoriteAnimeCard = memo(({
   onRemove: (id: string) => void;
 }) => {
   const theme = useTheme();
-  const { addToFavorites, removeFromFavorites } = useAuth();
-  const isFavorite = true; // This is the favorites page, so all items are favorites
 
-  const handleFavoriteToggle = (e: React.MouseEvent) => {
+  const handleRemove = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isFavorite) {
-      removeFromFavorites(anime.mal_id);
-      onRemove(anime.mal_id);
-    } else {
-      addToFavorites(anime.mal_id);
-    }
+    onRemove(anime.mal_id.toString());
   };
 
   return (
@@ -58,7 +49,7 @@ const FavoriteAnimeCard = memo(({
     >
       <Card
         sx={{
-          height: '450px',
+          height: '400px',
           display: 'flex',
           flexDirection: 'column',
           backgroundColor: theme.palette.background.paper,
@@ -82,7 +73,7 @@ const FavoriteAnimeCard = memo(({
       >
         {/* Remove button */}
         <IconButton
-          onClick={handleFavoriteToggle}
+          onClick={handleRemove}
           sx={{
             position: 'absolute',
             top: 8,
@@ -233,9 +224,24 @@ const Favorites: React.FC = () => {
       setError(null);
 
       try {
-        const animePromises = user.favorites.map(id => fetchAnimeById(id));
+        // Fetch anime data for each favorite ID
+        const animePromises = user.favorites.map(async (id) => {
+          try {
+            return await fetchAnimeById(id);
+          } catch (err) {
+            console.error(`Failed to fetch anime ${id}:`, err);
+            return null; // Return null for failed requests
+          }
+        });
+        
         const animeData = await Promise.all(animePromises);
-        setFavoriteAnime(animeData);
+        // Filter out null values (failed requests)
+        const validAnime = animeData.filter(anime => anime !== null);
+        setFavoriteAnime(validAnime);
+        
+        if (validAnime.length < user.favorites.length) {
+          setError(`Some favorites couldn't be loaded (${user.favorites.length - validAnime.length} failed)`);
+        }
       } catch (err) {
         setError('Failed to load favorite anime');
         console.error('Error loading favorites:', err);
@@ -249,21 +255,8 @@ const Favorites: React.FC = () => {
 
   const handleRemoveFromFavorites = (animeId: string) => {
     removeFromFavorites(animeId);
-    setFavoriteAnime(prev => prev.filter(anime => anime.mal_id !== animeId));
+    setFavoriteAnime(prev => prev.filter(anime => anime.mal_id.toString() !== animeId));
   };
-
-  if (loading) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '50vh' 
-      }}>
-        <CircularProgress size={60} />
-      </Box>
-    );
-  }
 
   return (
     <Box sx={{ 
@@ -284,17 +277,26 @@ const Favorites: React.FC = () => {
           color: theme.palette.text.secondary,
           fontWeight: 400
         }}>
-          Your personal collection of beloved anime
+          Your personal collection of beloved anime ({user?.favorites.length || 0} items)
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
-      {favoriteAnime.length === 0 ? (
+      {loading ? (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '50vh' 
+        }}>
+          <CircularProgress size={60} />
+        </Box>
+      ) : favoriteAnime.length === 0 ? (
         <Box sx={{ 
           textAlign: 'center', 
           py: 8,
@@ -312,12 +314,15 @@ const Favorites: React.FC = () => {
         <Box sx={{ 
           display: 'grid',
           gridTemplateColumns: {
-            xs: '1fr',
+            xs: 'repeat(1, 1fr)',
             sm: 'repeat(2, 1fr)',
             md: 'repeat(3, 1fr)',
-            lg: 'repeat(4, 1fr)'
+            lg: 'repeat(4, 1fr)',
+            xl: 'repeat(5, 1fr)'
           },
-          gap: 3
+          gap: 3,
+          maxWidth: '1400px',
+          margin: '0 auto'
         }}>
           <AnimatePresence>
             {favoriteAnime.map((anime, index) => (

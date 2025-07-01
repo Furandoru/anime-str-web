@@ -1,4 +1,5 @@
 import React, { useState, useEffect, memo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -7,21 +8,22 @@ import {
   Typography,
   useTheme,
   Pagination,
-  FormControl,
-  Select,
-  MenuItem,
   CircularProgress,
   Alert,
   IconButton,
+  FormControl,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { fetchPopularAnime } from '../../api/jikan';
+import { searchAnime } from '../../api/jikan';
 import { useAuth } from '../../context/AuthContext';
+import UserDashboard from '../../components/UserDashboard';
 
-// Memoized Anime Card Component for better performance
+// Memoized Anime Card Component - Same as Home page
 const AnimeCard = memo(({ anime, index }: { anime: any; index: number }) => {
   const theme = useTheme();
   const { user, addToFavorites, removeFromFavorites } = useAuth();
@@ -161,8 +163,10 @@ const AnimeCard = memo(({ anime, index }: { anime: any; index: number }) => {
 });
 AnimeCard.displayName = 'AnimeCard';
 
-const Home: React.FC = () => {
+const Search: React.FC = () => {
   const theme = useTheme();
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('q') || '';
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
   const [animeList, setAnimeList] = useState<any[]>([]);
@@ -171,16 +175,22 @@ const Home: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
+    if (!query.trim()) {
+      setAnimeList([]);
+      setTotalPages(1);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    fetchPopularAnime(currentPage)
+    searchAnime(query, currentPage)
       .then((data) => {
         setAnimeList(data);
         setTotalPages(20); // Jikan returns 25 per page, but you can adjust as needed
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [currentPage]);
+  }, [query, currentPage]);
 
   // Handle page change
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
@@ -188,12 +198,39 @@ const Home: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle items per page change (Jikan only supports 25 per page max)
+  // Handle items per page change
   const handleItemsPerPageChange = (event: SelectChangeEvent<number>) => {
     const newItemsPerPage = Number(event.target.value);
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
   };
+
+  if (!query.trim()) {
+    return (
+      <Box sx={{ 
+        padding: 3,
+        minHeight: '100vh',
+        backgroundColor: theme.palette.background.default
+      }}>
+        <UserDashboard />
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h3" sx={{ 
+            fontWeight: 'bold', 
+            color: theme.palette.primary.main,
+            mb: 2
+          }}>
+            Search for Anime
+          </Typography>
+          <Typography variant="h6" sx={{ 
+            color: theme.palette.text.secondary,
+            fontWeight: 400
+          }}>
+            Use the search bar above to find your favorite anime
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ 
@@ -201,6 +238,9 @@ const Home: React.FC = () => {
       minHeight: '100vh',
       backgroundColor: theme.palette.background.default
     }}>
+      {/* User Dashboard */}
+      <UserDashboard />
+      
       {/* Page Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" sx={{ 
@@ -208,15 +248,16 @@ const Home: React.FC = () => {
           color: theme.palette.primary.main,
           mb: 1
         }}>
-          Discover Amazing Anime
+          Search Results
         </Typography>
         <Typography variant="h6" sx={{ 
           color: theme.palette.text.secondary,
           fontWeight: 400
         }}>
-          Explore the latest and greatest anime series
+          Found {animeList.length} results for "{query}"
         </Typography>
       </Box>
+
       {/* Pagination Controls */}
       <Box sx={{ 
         display: 'flex', 
@@ -257,6 +298,7 @@ const Home: React.FC = () => {
           </FormControl>
         </Box>
       </Box>
+
       {/* Anime Grid */}
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
@@ -283,6 +325,19 @@ const Home: React.FC = () => {
           ))}
         </Box>
       )}
+
+      {/* No Results */}
+      {!loading && !error && animeList.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No results found for "{query}"
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Try searching with different keywords
+          </Typography>
+        </Box>
+      )}
+
       {/* Pagination */}
       <Box sx={{ 
         display: 'flex', 
@@ -327,5 +382,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
-export { Home };
+export default Search; 

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
 import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded';
-import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
+
 
 const Sidebar: React.FC = () => {
   const theme = useTheme();
@@ -211,46 +211,7 @@ const Sidebar: React.FC = () => {
             </Box>
           </Link>
 
-          <Link to="/history" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              width: '100%', 
-              py: 1.5, 
-              px: 2,
-              borderRadius: 2.5, 
-              border: `1px solid transparent`,
-              transition: 'all 0.2s ease',
-              '&:hover': { 
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.08)' 
-                  : 'rgba(0,0,0,0.04)',
-                border: `1px solid ${theme.palette.primary.main}`,
-                transform: 'translateY(-2px)',
-                boxShadow: theme.palette.mode === 'dark'
-                  ? '0 4px 12px rgba(0,0,0,0.3)'
-                  : '0 4px 12px rgba(0,0,0,0.1)'
-              } 
-            }}>
-              <HistoryRoundedIcon sx={{ 
-                fontSize: 32, 
-                mb: 1, 
-                color: theme.palette.primary.main 
-              }} />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: theme.palette.text.primary, 
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  textAlign: 'center'
-                }}
-              >
-                History
-              </Typography>
-            </Box>
-          </Link>
+
 
           <Link to="/about" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
             <Box sx={{ 

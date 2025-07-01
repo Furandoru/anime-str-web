@@ -9,38 +9,32 @@ import {
   Alert,
   CircularProgress,
   InputAdornment,
-  IconButton,
   useTheme
 } from '@mui/material';
-import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material';
+import { Email } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { requestResetPassword } from '../../api/backend';
 
-const Login: React.FC = () => {
+const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        navigate('/');
-      } else {
-        setError('Invalid email or password. Please try again.');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login. Please try again.';
+      const data = await requestResetPassword(email);
+      setSuccess(data.message);
+    } catch (err: any) {
+      const errorMessage = err.message || 'An error occurred. Please try again.';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -73,16 +67,22 @@ const Login: React.FC = () => {
       >
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: theme.palette.primary.main, mb: 1 }}>
-            Welcome Back
+            Reset Password
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Sign in to your AzukiCloud account
+            Enter your email to receive a reset link
           </Typography>
         </Box>
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {success}
           </Alert>
         )}
 
@@ -104,33 +104,6 @@ const Login: React.FC = () => {
             }}
           />
 
-          <TextField
-            fullWidth
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            sx={{ mb: 3 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Lock color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-
           <Button
             type="submit"
             fullWidth
@@ -138,7 +111,7 @@ const Login: React.FC = () => {
             size="large"
             disabled={isLoading}
             sx={{ 
-              mb: 2, 
+              mb: 3, 
               py: 1.5, 
               borderRadius: 2,
               textTransform: 'none',
@@ -146,23 +119,15 @@ const Login: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+            {isLoading ? <CircularProgress size={24} /> : 'Send Reset Link'}
           </Button>
         </form>
 
-        <Box sx={{ textAlign: 'center', mb: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            <Link component={RouterLink} to="/forgot-password" sx={{ fontWeight: 'bold' }}>
-              Forgot your password?
-            </Link>
-          </Typography>
-        </Box>
-
         <Box sx={{ textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            Don't have an account?{' '}
-            <Link component={RouterLink} to="/register" sx={{ fontWeight: 'bold' }}>
-              Sign up
+            Remember your password?{' '}
+            <Link component={RouterLink} to="/login" sx={{ fontWeight: 'bold' }}>
+              Sign in
             </Link>
           </Typography>
         </Box>
@@ -171,4 +136,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login; 
+export default ForgotPassword; 

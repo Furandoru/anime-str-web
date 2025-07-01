@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -20,6 +20,7 @@ import {
   Badge,
   Grid,
   Container,
+  CircularProgress,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -29,8 +30,6 @@ import {
   Email as EmailIcon,
   Settings as SettingsIcon,
   Favorite as FavoriteIcon,
-  WatchLater as WatchLaterIcon,
-  History as HistoryIcon,
   CameraAlt as CameraIcon,
   Palette as PaletteIcon,
   Notifications as NotificationsIcon,
@@ -38,13 +37,14 @@ import {
   CalendarToday as CalendarIcon,
   Security as SecurityIcon,
   Speed as SpeedIcon,
+  CategoryRounded as CategoryRoundedIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 
 const Profile: React.FC = () => {
-  const { user, updateUser, updateAvatar } = useAuth();
+  const { user, isLoading, updateUser, updateAvatar, updateUserPreferences, syncUserData } = useAuth();
   const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -54,32 +54,76 @@ const Profile: React.FC = () => {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Update editedUser when user changes
+  useEffect(() => {
+    if (user) {
+      setEditedUser(user);
+    }
+  }, [user]);
+
+  // Show loading state while auth is loading
+  if (isLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh' 
+      }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
   if (!user) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h6" color="error">
-          User not found
+          User not found. Please log in again.
         </Typography>
       </Box>
     );
   }
 
+  // Ensure we have safe defaults for all user properties
+  const safeUser = {
+    ...user,
+    favorites: user.favorites || [],
+    watchlist: user.watchlist || [],
+    preferences: user.preferences || { theme: 'dark', language: 'en', notifications: true },
+    avatar: user.avatar || '',
+  };
+
   const handleEdit = () => {
-    setEditedUser(user);
+    setEditedUser(safeUser);
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    setEditedUser(user);
+    setEditedUser(safeUser);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editedUser) {
-      updateUser(editedUser);
-      setIsEditing(false);
-      setSuccessMessage('Profile updated successfully!');
-      setShowSuccess(true);
+      try {
+        // Update preferences in backend
+        await updateUserPreferences({
+          theme: editedUser.preferences.theme,
+          language: editedUser.preferences.language,
+          notifications: editedUser.preferences.notifications,
+        });
+        
+        // Update local state
+        updateUser(editedUser);
+        setIsEditing(false);
+        setSuccessMessage('Profile updated successfully and saved to your account!');
+        setShowSuccess(true);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        setSuccessMessage('Profile updated locally, but failed to save to server.');
+        setShowSuccess(true);
+      }
     }
   };
 
@@ -109,7 +153,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  const processImageFile = (file: File) => {
+  const processImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file (JPEG, PNG, GIF, etc.)');
       return;
@@ -123,12 +167,17 @@ const Profile: React.FC = () => {
     setUploadingImage(true);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const result = e.target?.result as string;
       if (result) {
-        updateAvatar(result);
-        setSuccessMessage('Profile picture updated successfully!');
-        setShowSuccess(true);
+        try {
+          await updateAvatar(result);
+          setSuccessMessage('Profile picture updated successfully and saved to your account!');
+          setShowSuccess(true);
+        } catch (error) {
+          setSuccessMessage('Profile picture updated locally, but failed to save to server.');
+          setShowSuccess(true);
+        }
       }
       setUploadingImage(false);
     };
@@ -163,6 +212,18 @@ const Profile: React.FC = () => {
     fileInputRef.current?.click();
   };
 
+  const handleSyncData = async () => {
+    try {
+      await syncUserData();
+      setSuccessMessage('Data synced successfully from server!');
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Error syncing data:', error);
+      setSuccessMessage('Failed to sync data from server.');
+      setShowSuccess(true);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -181,24 +242,10 @@ const Profile: React.FC = () => {
   const stats = [
     {
       title: 'Favorites',
-      value: user.favorites.length,
+      value: safeUser.favorites.length,
       icon: <FavoriteIcon sx={{ fontSize: 24, color: '#667eea' }} />,
       color: '#667eea',
       max: 100
-    },
-    {
-      title: 'Watchlist',
-      value: user.watchlist.length,
-      icon: <WatchLaterIcon sx={{ fontSize: 24, color: '#f093fb' }} />,
-      color: '#f093fb',
-      max: 50
-    },
-    {
-      title: 'Watched',
-      value: user.watchHistory.length,
-      icon: <HistoryIcon sx={{ fontSize: 24, color: '#4facfe' }} />,
-      color: '#4facfe',
-      max: 200
     }
   ];
 
@@ -242,376 +289,301 @@ const Profile: React.FC = () => {
               >
                 Profile
               </Typography>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  fontWeight: 400,
-                  opacity: 0.8
-                }}
-              >
+              <Typography variant="h6" sx={{ 
+                color: theme.palette.text.secondary,
+                fontWeight: 400,
+                opacity: 0.8
+              }}>
                 Manage your account and preferences
               </Typography>
             </Box>
           </motion.div>
 
-          {/* Profile Header Card */}
+          {/* Profile Content */}
           <motion.div variants={itemVariants}>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                p: { xs: 3, md: 4 }, 
-                mb: 4, 
-                borderRadius: 4,
-                background: theme.palette.mode === 'dark'
-                  ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
-                  : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-                backdropFilter: 'blur(20px)',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Background decoration */}
-              <Box sx={{
-                position: 'absolute',
-                top: -100,
-                right: -100,
-                width: 300,
-                height: 300,
-                borderRadius: '50%',
-                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-                opacity: 0.05,
-                zIndex: 0
-              }} />
-              
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: { xs: 'column', lg: 'row' },
-                alignItems: { xs: 'center', lg: 'flex-start' },
-                gap: 4,
-                position: 'relative',
-                zIndex: 1
-              }}>
-                {/* Avatar Section */}
-                <Box sx={{ textAlign: 'center' }}>
-                  <Box
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    sx={{
-                      position: 'relative',
-                      display: 'inline-block',
-                      cursor: 'pointer',
-                      '&:hover .upload-overlay': {
-                        opacity: 1,
-                      }
-                    }}
-                  >
-                    <Badge
-                      overlap="circular"
-                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                      badgeContent={
-                        <IconButton
-                          onClick={triggerFileInput}
-                          disabled={uploadingImage}
-                          sx={{
-                            backgroundColor: theme.palette.primary.main,
-                            color: 'white',
-                            width: 36,
-                            height: 36,
-                            '&:hover': {
-                              backgroundColor: theme.palette.primary.dark,
-                            },
-                            '&:disabled': {
-                              backgroundColor: theme.palette.action.disabled,
-                            }
-                          }}
-                        >
-                          {uploadingImage ? (
-                            <Box sx={{ 
-                              width: 18, 
-                              height: 18, 
-                              border: '2px solid transparent',
-                              borderTop: '2px solid white',
-                              borderRadius: '50%',
-                              animation: 'spin 1s linear infinite'
-                            }} />
-                          ) : (
-                            <CameraIcon sx={{ fontSize: 18 }} />
-                          )}
-                        </IconButton>
-                      }
-                    >
-                      <Avatar
-                        src={user.avatar}
-                        sx={{
-                          width: 120,
-                          height: 120,
-                          fontSize: '48px',
-                          fontWeight: 'bold',
-                          background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-                          border: `4px solid ${theme.palette.background.paper}`,
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                          cursor: 'pointer',
-                          transition: 'transform 0.2s ease-in-out',
-                          '&:hover': {
-                            transform: 'scale(1.05)',
-                          }
-                        }}
-                        onClick={triggerFileInput}
-                      >
-                        {user.username.charAt(0).toUpperCase()}
-                      </Avatar>
-                    </Badge>
-                    
-                    {/* Upload overlay */}
-                    <Box
-                      className="upload-overlay"
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        borderRadius: '50%',
-                        backgroundColor: dragOver ? 'rgba(102, 126, 234, 0.8)' : 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: 0,
-                        transition: 'opacity 0.2s ease-in-out',
-                        pointerEvents: 'none',
-                        zIndex: 1
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'white',
-                          fontWeight: 600,
-                          textAlign: 'center',
-                          px: 2
-                        }}
-                      >
-                        {dragOver ? 'Drop image here' : 'Click to upload'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Typography variant="h4" sx={{ mt: 2, mb: 1, fontWeight: 700 }}>
-                    {user.username}
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <CalendarIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                    <Typography variant="body2" color="text.secondary">
-                      Member since {new Date().getFullYear()}
-                    </Typography>
-                  </Box>
-
-                  <Chip 
-                    label="Premium Member" 
-                    color="primary" 
-                    variant="outlined"
-                    sx={{ fontWeight: 600 }}
-                  />
-
-                  {/* Remove profile picture button */}
-                  {user.avatar && (
-                    <Button
-                      variant="text"
-                      size="small"
-                      onClick={() => {
-                        updateAvatar('');
-                        setSuccessMessage('Profile picture removed successfully!');
-                        setShowSuccess(true);
-                      }}
-                      sx={{ 
-                        mt: 1, 
-                        color: theme.palette.error.main,
-                        fontSize: '0.75rem',
-                        '&:hover': {
-                          backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                        }
-                      }}
-                    >
-                      Remove picture
-                    </Button>
-                  )}
-                </Box>
-
-                {/* Stats Grid */}
-                <Box sx={{ 
-                  flex: 1,
-                  display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
-                  gap: 3,
-                  width: '100%'
-                }}>
-                  {stats.map((stat, index) => (
-                    <Card 
-                      key={index}
-                      sx={{ 
-                        background: theme.palette.mode === 'dark'
-                          ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                          : 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%)',
-                        backdropFilter: 'blur(10px)',
-                        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
-                        borderRadius: 3,
-                        transition: 'transform 0.2s ease-in-out',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                        }
-                      }}
-                    >
-                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                        <Box sx={{ mb: 2 }}>
-                          {stat.icon}
-                        </Box>
-                        <Typography 
-                          variant="h3" 
-                          sx={{ 
-                            fontWeight: 'bold',
-                            color: stat.color,
-                            mb: 1
-                          }}
-                        >
-                          {stat.value}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          {stat.title}
-                        </Typography>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={Math.min((stat.value / stat.max) * 100, 100)}
-                          sx={{ 
-                            height: 6, 
-                            borderRadius: 3,
-                            backgroundColor: `${stat.color}20`,
-                            '& .MuiLinearProgress-bar': {
-                              background: `linear-gradient(45deg, ${stat.color} 0%, ${stat.color}80 100%)`,
-                              borderRadius: 3,
-                            }
-                          }}
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Box>
-              </Box>
-            </Paper>
-          </motion.div>
-
-          {/* Main Content Grid */}
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
-            {/* Left Column - Personal Info & Preferences */}
-            <Box sx={{ flex: { lg: 2 } }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {/* Personal Information */}
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
+              {/* Left Column - Profile Info & Stats */}
+              <Box sx={{ flex: { lg: 2 } }}>
+                {/* Profile Header Card */}
                 <motion.div variants={itemVariants}>
                   <Paper 
                     elevation={0}
                     sx={{ 
-                      p: 4, 
+                      p: { xs: 3, md: 4 }, 
+                      mb: 4, 
                       borderRadius: 4,
                       background: theme.palette.mode === 'dark'
                         ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
                         : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
                       backdropFilter: 'blur(20px)',
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <PersonIcon sx={{ mr: 2, color: theme.palette.primary.main, fontSize: 28 }} />
-                      <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600 }}>
-                        Personal Information
-                      </Typography>
-                      {!isEditing ? (
-                        <Button
-                          variant="outlined"
-                          startIcon={<EditIcon />}
-                          onClick={handleEdit}
-                          sx={{ borderRadius: 2 }}
+                    {/* Background decoration */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: -100,
+                      right: -100,
+                      width: 300,
+                      height: 300,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                      opacity: 0.05,
+                      zIndex: 0
+                    }} />
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: { xs: 'column', lg: 'row' },
+                      alignItems: { xs: 'center', lg: 'flex-start' },
+                      gap: 4,
+                      position: 'relative',
+                      zIndex: 1
+                    }}>
+                      {/* Avatar Section */}
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Box
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          sx={{
+                            position: 'relative',
+                            display: 'inline-block',
+                            cursor: 'pointer',
+                            '&:hover .upload-overlay': {
+                              opacity: 1,
+                            }
+                          }}
                         >
-                          Edit
-                        </Button>
-                      ) : (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button
-                            variant="contained"
-                            startIcon={<SaveIcon />}
-                            onClick={handleSave}
-                            sx={{ borderRadius: 2 }}
+                          <Badge
+                            overlap="circular"
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            badgeContent={
+                              <IconButton
+                                onClick={triggerFileInput}
+                                disabled={uploadingImage}
+                                sx={{
+                                  backgroundColor: theme.palette.primary.main,
+                                  color: 'white',
+                                  width: 36,
+                                  height: 36,
+                                  '&:hover': {
+                                    backgroundColor: theme.palette.primary.dark,
+                                  },
+                                  '&:disabled': {
+                                    backgroundColor: theme.palette.action.disabled,
+                                  }
+                                }}
+                              >
+                                {uploadingImage ? (
+                                  <Box sx={{ 
+                                    width: 18, 
+                                    height: 18, 
+                                    border: '2px solid transparent',
+                                    borderTop: '2px solid white',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                  }} />
+                                ) : (
+                                  <CameraIcon sx={{ fontSize: 18 }} />
+                                )}
+                              </IconButton>
+                            }
                           >
-                            Save
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            startIcon={<CancelIcon />}
-                            onClick={handleCancel}
-                            sx={{ borderRadius: 2 }}
+                            <Avatar
+                              src={safeUser.avatar}
+                              sx={{
+                                width: 120,
+                                height: 120,
+                                fontSize: '48px',
+                                fontWeight: 'bold',
+                                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                                border: `4px solid ${theme.palette.background.paper}`,
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s ease-in-out',
+                                '&:hover': {
+                                  transform: 'scale(1.05)',
+                                }
+                              }}
+                              onClick={triggerFileInput}
+                            >
+                              {safeUser.username.charAt(0).toUpperCase()}
+                            </Avatar>
+                          </Badge>
+                          
+                          {/* Upload overlay */}
+                          <Box
+                            className="upload-overlay"
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              borderRadius: '50%',
+                              backgroundColor: dragOver ? 'rgba(102, 126, 234, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease-in-out',
+                              pointerEvents: 'none',
+                              zIndex: 1
+                            }}
                           >
-                            Cancel
-                          </Button>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'white',
+                                fontWeight: 600,
+                                textAlign: 'center',
+                                px: 2
+                              }}
+                            >
+                              {dragOver ? 'Drop image here' : 'Click to upload'}
+                            </Typography>
+                          </Box>
                         </Box>
-                      )}
-                    </Box>
+                        
+                        <Typography variant="h4" sx={{ mt: 2, mb: 1, fontWeight: 700 }}>
+                          {safeUser.username}
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          <CalendarIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                          <Typography variant="body2" color="text.secondary">
+                            Member since {new Date().getFullYear()}
+                          </Typography>
+                        </Box>
 
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                      <TextField
-                        fullWidth
-                        label="Username"
-                        value={isEditing ? editedUser?.username || '' : user.username}
-                        onChange={(e) => handleInputChange('username', e.target.value)}
-                        disabled={!isEditing}
-                        InputProps={{
-                          startAdornment: <PersonIcon sx={{ mr: 1, color: 'action.active' }} />,
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
+                        <Chip 
+                          label="Premium Member" 
+                          color="primary" 
+                          variant="outlined"
+                          sx={{ fontWeight: 600 }}
+                        />
+
+                        {/* Remove profile picture button */}
+                        {safeUser.avatar && (
+                          <Button
+                            variant="text"
+                            size="small"
+                            onClick={() => {
+                              updateAvatar('');
+                              setSuccessMessage('Profile picture removed successfully!');
+                              setShowSuccess(true);
+                            }}
+                            sx={{ 
+                              mt: 1, 
+                              color: theme.palette.error.main,
+                              fontSize: '0.75rem',
+                              '&:hover': {
+                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                              }
+                            }}
+                          >
+                            Remove picture
+                          </Button>
+                        )}
+                      </Box>
+
+                      {/* Stats Grid */}
+                      <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 2 }}>
+                        {stats.map((stat, index) => (
+                          <Card key={index} sx={{ 
+                            p: 2, 
                             borderRadius: 2,
-                          }
-                        }}
-                      />
-                      <TextField
-                        fullWidth
-                        label="Email"
-                        value={isEditing ? editedUser?.email || '' : user.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        disabled={!isEditing}
-                        InputProps={{
-                          startAdornment: <EmailIcon sx={{ mr: 1, color: 'action.active' }} />,
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 2,
-                          }
-                        }}
-                      />
+                            background: theme.palette.mode === 'dark'
+                              ? 'rgba(255,255,255,0.05)'
+                              : 'rgba(0,0,0,0.02)',
+                            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                          }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              {stat.icon}
+                              <Box sx={{ ml: 2, flex: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                  {stat.title}
+                                </Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 'bold', color: stat.color }}>
+                                  {stat.value}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <LinearProgress
+                              variant="determinate"
+                              value={(stat.value / stat.max) * 100}
+                              sx={{
+                                height: 6,
+                                borderRadius: 3,
+                                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: stat.color,
+                                  borderRadius: 3,
+                                }
+                              }}
+                            />
+                          </Card>
+                        ))}
+                      </Box>
                     </Box>
                   </Paper>
                 </motion.div>
 
-                {/* Preferences */}
+                {/* Preferences Card */}
                 <motion.div variants={itemVariants}>
                   <Paper 
                     elevation={0}
                     sx={{ 
-                      p: 4, 
+                      p: { xs: 3, md: 4 }, 
                       borderRadius: 4,
                       background: theme.palette.mode === 'dark'
                         ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
                         : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
                       backdropFilter: 'blur(20px)',
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <SettingsIcon sx={{ mr: 2, color: theme.palette.primary.main, fontSize: 28 }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                       <Typography variant="h5" sx={{ fontWeight: 600 }}>
                         Preferences
                       </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={handleSave}
+                              startIcon={<SaveIcon />}
+                              sx={{ borderRadius: 2 }}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={handleCancel}
+                              startIcon={<CancelIcon />}
+                              sx={{ borderRadius: 2 }}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={handleEdit}
+                            startIcon={<EditIcon />}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                      </Box>
                     </Box>
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -619,7 +591,7 @@ const Profile: React.FC = () => {
                         <FormControlLabel
                           control={
                             <Switch
-                              checked={isEditing ? editedUser?.preferences.notifications : user.preferences.notifications}
+                              checked={isEditing ? editedUser?.preferences.notifications : safeUser.preferences.notifications}
                               onChange={(e) => handleInputChange('notifications', e.target.checked)}
                               disabled={!isEditing}
                               sx={{
@@ -643,7 +615,7 @@ const Profile: React.FC = () => {
                           fullWidth
                           select
                           label="Theme"
-                          value={isEditing ? editedUser?.preferences.theme : user.preferences.theme}
+                          value={isEditing ? editedUser?.preferences.theme : safeUser.preferences.theme}
                           onChange={(e) => handleInputChange('theme', e.target.value)}
                           disabled={!isEditing}
                           InputProps={{
@@ -662,7 +634,7 @@ const Profile: React.FC = () => {
                       <TextField
                         fullWidth
                         label="Language"
-                        value={isEditing ? editedUser?.preferences.language : user.preferences.language}
+                        value={isEditing ? editedUser?.preferences.language : safeUser.preferences.language}
                         onChange={(e) => handleInputChange('language', e.target.value)}
                         disabled={!isEditing}
                         InputProps={{
@@ -678,117 +650,97 @@ const Profile: React.FC = () => {
                   </Paper>
                 </motion.div>
               </Box>
+
+              {/* Right Column - Quick Actions & Stats */}
+              <Box sx={{ flex: { lg: 1 } }}>
+                <motion.div variants={itemVariants}>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      p: 4, 
+                      borderRadius: 4,
+                      background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
+                        : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
+                      backdropFilter: 'blur(20px)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
+                      height: 'fit-content',
+                      position: 'sticky',
+                      top: 20
+                    }}
+                  >
+                    <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+                      Quick Actions
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 4 }}>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        component={Link}
+                        to="/favorites"
+                        startIcon={<FavoriteIcon />}
+                        sx={{ 
+                          borderRadius: 2, 
+                          justifyContent: 'flex-start',
+                          py: 1.5,
+                          borderColor: '#667eea',
+                          color: '#667eea',
+                          '&:hover': {
+                            borderColor: '#5a6fd8',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                          }
+                        }}
+                      >
+                        View Favorites
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        component={Link}
+                        to="/genres"
+                        startIcon={<CategoryRoundedIcon />}
+                        sx={{ 
+                          borderRadius: 2, 
+                          justifyContent: 'flex-start',
+                          py: 1.5,
+                          borderColor: '#f093fb',
+                          color: '#f093fb',
+                          '&:hover': {
+                            borderColor: '#e085e8',
+                            backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                          }
+                        }}
+                      >
+                        Browse Genres
+                      </Button>
+                    </Box>
+
+                    <Divider sx={{ my: 3 }} />
+
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      Account Status
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <SecurityIcon sx={{ color: theme.palette.success.main }} />
+                        <Typography variant="body2">Account Verified</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <SpeedIcon sx={{ color: theme.palette.info.main }} />
+                        <Typography variant="body2">Premium Access</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <CalendarIcon sx={{ color: theme.palette.warning.main }} />
+                        <Typography variant="body2">Active Member</Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                </motion.div>
+              </Box>
             </Box>
-
-            {/* Right Column - Quick Actions & Stats */}
-            <Box sx={{ flex: { lg: 1 } }}>
-              <motion.div variants={itemVariants}>
-                <Paper 
-                  elevation={0}
-                  sx={{ 
-                    p: 4, 
-                    borderRadius: 4,
-                    background: theme.palette.mode === 'dark'
-                      ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
-                      : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
-                    backdropFilter: 'blur(20px)',
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
-                    height: 'fit-content',
-                    position: 'sticky',
-                    top: 20
-                  }}
-                >
-                  <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-                    Quick Actions
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 4 }}>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      component={Link}
-                      to="/favorites"
-                      startIcon={<FavoriteIcon />}
-                      sx={{ 
-                        borderRadius: 2, 
-                        justifyContent: 'flex-start',
-                        py: 1.5,
-                        borderColor: '#667eea',
-                        color: '#667eea',
-                        '&:hover': {
-                          borderColor: '#5a6fd8',
-                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        }
-                      }}
-                    >
-                      View Favorites
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      component={Link}
-                      to="/genres"
-                      startIcon={<WatchLaterIcon />}
-                      sx={{ 
-                        borderRadius: 2, 
-                        justifyContent: 'flex-start',
-                        py: 1.5,
-                        borderColor: '#f093fb',
-                        color: '#f093fb',
-                        '&:hover': {
-                          borderColor: '#e085e8',
-                          backgroundColor: 'rgba(240, 147, 251, 0.1)',
-                        }
-                      }}
-                    >
-                      Browse Genres
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      component={Link}
-                      to="/history"
-                      startIcon={<HistoryIcon />}
-                      sx={{ 
-                        borderRadius: 2, 
-                        justifyContent: 'flex-start',
-                        py: 1.5,
-                        borderColor: '#4facfe',
-                        color: '#4facfe',
-                        '&:hover': {
-                          borderColor: '#4a9ee8',
-                          backgroundColor: 'rgba(79, 172, 254, 0.1)',
-                        }
-                      }}
-                    >
-                      View History
-                    </Button>
-                  </Box>
-
-                  <Divider sx={{ my: 3 }} />
-
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    Account Status
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <SecurityIcon sx={{ color: theme.palette.success.main }} />
-                      <Typography variant="body2">Account Verified</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <SpeedIcon sx={{ color: theme.palette.info.main }} />
-                      <Typography variant="body2">Premium Access</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <CalendarIcon sx={{ color: theme.palette.warning.main }} />
-                      <Typography variant="body2">Active Member</Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-              </motion.div>
-            </Box>
-          </Box>
+          </motion.div>
         </motion.div>
       </Container>
 
