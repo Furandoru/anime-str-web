@@ -16,6 +16,7 @@ import {
   ListItemAvatar,
   CircularProgress,
   ClickAwayListener,
+  Button,
 } from '@mui/material';
 import NightsStayRoundedIcon from '@mui/icons-material/NightsStayRounded';
 import SearchIcon from '@mui/icons-material/Search';
@@ -369,127 +370,32 @@ const Topbar: React.FC = () => {
           )}
         </Box>
         
-        {/* Right: Dark Mode Toggle and User Avatar */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          minWidth: 'fit-content',
-          ml: 'auto',
-          gap: 1,
-          flexShrink: 0
-        }}>
-          {/* Mobile Search Button */}
-          <IconButton
-            sx={{ 
-              display: { xs: 'flex', md: 'none' },
-              color: theme.palette.text.primary,
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255,255,255,0.1)' 
-                : 'rgba(0,0,0,0.05)',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              transition: 'all 0.3s ease-in-out',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.15)' 
-                  : 'rgba(0,0,0,0.1)',
-                border: `1px solid ${theme.palette.primary.main}`,
-                transform: 'scale(1.05)',
-                boxShadow: `0 0 0 3px ${theme.palette.primary.main}15`,
-              }
-            }}
-          >
-            <SearchIcon />
-          </IconButton>
-
-          {/* Dark Mode Toggle */}
-          <IconButton
-            onClick={toggleTheme}
-            sx={{ 
-              color: theme.palette.text.primary,
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255,255,255,0.1)' 
-                : 'rgba(0,0,0,0.05)',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              transition: 'all 0.3s ease-in-out',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.15)' 
-                  : 'rgba(0,0,0,0.1)',
-                border: `1px solid ${theme.palette.primary.main}`,
-                transform: 'scale(1.05)',
-                boxShadow: `0 0 0 3px ${theme.palette.primary.main}15`,
-              }
-            }}
-          >
-            {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
-          </IconButton>
-
-          {/* User Avatar */}
-          <IconButton
-            onClick={handleClick}
-            sx={{ 
-              p: 0.5,
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255,255,255,0.1)' 
-                : 'rgba(0,0,0,0.05)',
-              border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              transition: 'all 0.3s ease-in-out',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.15)' 
-                  : 'rgba(0,0,0,0.1)',
-                border: `2px solid ${theme.palette.primary.main}`,
-                transform: 'scale(1.05)',
-              }
-            }}
-          >
-            <Avatar 
-              src={user?.avatar} 
-              alt={user?.username || 'User'}
-              sx={{ 
-                width: 36, 
-                height: 36,
-                background: user?.avatar 
-                  ? 'transparent' 
-                  : 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-                fontSize: '14px',
-                fontWeight: 600,
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 2px 8px rgba(0,0,0,0.3)' 
-                  : '0 2px 8px rgba(0,0,0,0.1)',
-              }}
-            >
-              {user?.username?.charAt(0).toUpperCase() || 'U'}
-            </Avatar>
-          </IconButton>
-          
-          {/* Dropdown Menu */}
-          <Menu
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleClose}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                minWidth: 200,
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 4px 20px rgba(0,0,0,0.4)' 
-                  : '0 4px 20px rgba(0,0,0,0.15)',
-                borderRadius: 2,
-                backgroundColor: theme.palette.background.paper
-              }
-            }}
-          >
-            <MenuItem onClick={handleUserClick} sx={{ py: 1.5 }}>
-              <PersonRoundedIcon sx={{ mr: 2, color: theme.palette.text.secondary }} />
-              <Typography sx={{ color: theme.palette.text.primary }}>Profile</Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: '#d32f2f' }}>
-              <LogoutRoundedIcon sx={{ mr: 2, color: '#d32f2f' }} />
-              <Typography>Logout</Typography>
-            </MenuItem>
-          </Menu>
+        {/* Right: User menu or login/register */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
+          {user ? (
+            <>
+              <IconButton onClick={handleClick} size="large">
+                <Avatar src={user.avatar} alt={user.username} sx={{ bgcolor: theme.palette.primary.main }}>
+                  {getUserInitials()}
+                </Avatar>
+                <KeyboardArrowDownRoundedIcon />
+              </IconButton>
+              <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+                <MenuItem onClick={handleUserClick}>
+                  <PersonRoundedIcon sx={{ mr: 1 }} /> Profile
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <LogoutRoundedIcon sx={{ mr: 1 }} /> Logout
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <>
+              <Button color="primary" variant="outlined" onClick={() => navigate('/login')}>Login</Button>
+              <Button color="primary" variant="contained" onClick={() => navigate('/register')}>Register</Button>
+            </>
+          )}
         </Box>
       </Box>
     </ClickAwayListener>

@@ -29,64 +29,18 @@ const App: React.FC = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* Protected Routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Home />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/search" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Search />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Profile />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Settings />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/about" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <About />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/genres" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Genres />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/favorites" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Favorites />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/anime/:id" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <AnimeDetail />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
+
+            {/* Public Main Pages */}
+            <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+            <Route path="/search" element={<MainLayout><Search /></MainLayout>} />
+            <Route path="/about" element={<MainLayout><About /></MainLayout>} />
+            <Route path="/genres" element={<MainLayout><Genres /></MainLayout>} />
+            <Route path="/anime/:id" element={<MainLayout><AnimeDetail /></MainLayout>} />
+
+            {/* Protected Personal Pages */}
+            <Route path="/favorites" element={<ProtectedRoute><MainLayout><Favorites /></MainLayout></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
           </Routes>
         </Router>
       </ThemeProvider>

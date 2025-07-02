@@ -5,12 +5,15 @@ import { Link } from 'react-router-dom';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
 import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded';
+import { useAuth } from '../../context/AuthContext';
+import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 
 
 const Sidebar: React.FC = () => {
   const theme = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const hideTimeoutRef = useRef<number | null>(null);
+  const { user } = useAuth();
 
   const showSidebar = () => {
     if (hideTimeoutRef.current) {
@@ -170,48 +173,132 @@ const Sidebar: React.FC = () => {
             </Box>
           </Link>
 
-          <Link to="/favorites" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              width: '100%', 
-              py: 1.5, 
-              px: 2,
-              borderRadius: 2.5, 
-              border: `1px solid transparent`,
-              transition: 'all 0.2s ease',
-              '&:hover': { 
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.08)' 
-                  : 'rgba(0,0,0,0.04)',
-                border: `1px solid ${theme.palette.secondary.main}`,
-                transform: 'translateY(-2px)',
-                boxShadow: theme.palette.mode === 'dark'
-                  ? '0 4px 12px rgba(0,0,0,0.3)'
-                  : '0 4px 12px rgba(0,0,0,0.1)'
-              } 
-            }}>
-              <FavoriteRoundedIcon sx={{ 
-                fontSize: 32, 
-                mb: 1, 
-                color: theme.palette.secondary.main 
-              }} />
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: theme.palette.text.primary, 
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  textAlign: 'center'
-                }}
-              >
-                Favorites
-              </Typography>
-            </Box>
-          </Link>
-
-
+          {/* Favorites/Profile links only if logged in, else show login */}
+          {user ? (
+            <>
+              <Link to="/favorites" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  width: '100%', 
+                  py: 1.5, 
+                  px: 2,
+                  borderRadius: 2.5, 
+                  border: `1px solid transparent`,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.08)' 
+                      : 'rgba(0,0,0,0.04)',
+                    border: `1px solid ${theme.palette.secondary.main}`,
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 4px 12px rgba(0,0,0,0.3)'
+                      : '0 4px 12px rgba(0,0,0,0.1)'
+                  } 
+                }}>
+                  <FavoriteRoundedIcon sx={{ 
+                    fontSize: 32, 
+                    mb: 1, 
+                    color: theme.palette.secondary.main 
+                  }} />
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary, 
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      textAlign: 'center'
+                    }}
+                  >
+                    Favorites
+                  </Typography>
+                </Box>
+              </Link>
+              <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  width: '100%', 
+                  py: 1.5, 
+                  px: 2,
+                  borderRadius: 2.5, 
+                  border: `1px solid transparent`,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.08)' 
+                      : 'rgba(0,0,0,0.04)',
+                    border: `1px solid ${theme.palette.primary.main}`,
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 4px 12px rgba(0,0,0,0.3)'
+                      : '0 4px 12px rgba(0,0,0,0.1)'
+                  } 
+                }}>
+                  <PersonRoundedIcon sx={{ 
+                    fontSize: 32, 
+                    mb: 1, 
+                    color: theme.palette.primary.main 
+                  }} />
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary, 
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      textAlign: 'center'
+                    }}
+                  >
+                    Profile
+                  </Typography>
+                </Box>
+              </Link>
+            </>
+          ) : (
+            <Link to="/login" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                width: '100%', 
+                py: 1.5, 
+                px: 2,
+                borderRadius: 2.5, 
+                border: `1px solid transparent`,
+                transition: 'all 0.2s ease',
+                '&:hover': { 
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.08)' 
+                    : 'rgba(0,0,0,0.04)',
+                  border: `1px solid ${theme.palette.primary.main}`,
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.palette.mode === 'dark'
+                    ? '0 4px 12px rgba(0,0,0,0.3)'
+                    : '0 4px 12px rgba(0,0,0,0.1)'
+                } 
+              }}>
+                <FavoriteRoundedIcon sx={{ 
+                  fontSize: 32, 
+                  mb: 1, 
+                  color: theme.palette.secondary.main 
+                }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.text.primary, 
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textAlign: 'center'
+                  }}
+                >
+                  Log in to save favorites
+                </Typography>
+              </Box>
+            </Link>
+          )}
 
           <Link to="/about" style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
             <Box sx={{ 

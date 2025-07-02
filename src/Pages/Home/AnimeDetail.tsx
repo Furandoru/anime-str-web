@@ -15,7 +15,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { ArrowBack, Favorite, FavoriteBorder } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { fetchAnimeById } from '../../api/jikan';
 import { useAuth } from '../../context/AuthContext';
 
@@ -23,13 +23,21 @@ const AnimeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
-  const { user, addToFavorites, removeFromFavorites } = useAuth();
+  let user, addToFavorites, removeFromFavorites;
+  try {
+    // Try to get auth context, but allow for guest users
+    ({ user, addToFavorites, removeFromFavorites } = useAuth());
+  } catch {
+    user = null;
+    addToFavorites = undefined;
+    removeFromFavorites = undefined;
+  }
   
   const [anime, setAnime] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isFavorite = user?.favorites.includes(id || '');
+  const isFavorite = user?.favorites?.includes(id || '');
 
   useEffect(() => {
     const loadAnime = async () => {
@@ -53,12 +61,11 @@ const AnimeDetail: React.FC = () => {
   }, [id]);
 
   const handleFavoriteToggle = () => {
-    if (!id) return;
-    
+    if (!id || !user) return;
     if (isFavorite) {
-      removeFromFavorites(id);
+      if (removeFromFavorites) removeFromFavorites(id);
     } else {
-      addToFavorites(id);
+      if (addToFavorites) addToFavorites(id);
     }
   };
 
@@ -111,10 +118,21 @@ const AnimeDetail: React.FC = () => {
           maxWidth: { xs: '100%', md: '400px' }
         }}>
           <Card sx={{ 
-            boxShadow: 3, 
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 20px rgba(0,0,0,0.3)' 
+              : '0 4px 20px rgba(0,0,0,0.1)',
             borderRadius: 2,
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            backgroundColor: theme.palette.background.paper,
+            transition: 'box-shadow 0.3s cubic-bezier(.4,0,.2,1), transform 0.2s cubic-bezier(.4,0,.2,1), background-color 0.2s cubic-bezier(.4,0,.2,1)',
+            '&:hover': {
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 8px 32px rgba(0,0,0,0.35)' 
+                : '0 8px 32px rgba(0,0,0,0.13)',
+              backgroundColor: theme.palette.background.paper,
+              transform: 'translateY(-4px)',
+            }
           }}>
             <CardMedia
               component="img"
@@ -200,23 +218,72 @@ const AnimeDetail: React.FC = () => {
               </Typography>
             )}
           </Box>
-          
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Button variant="contained" size="large">
-              Watch Now
-            </Button>
-            <Button 
-              variant={isFavorite ? "contained" : "outlined"} 
-              size="large"
-              startIcon={isFavorite ? <Favorite /> : <FavoriteBorder />}
-              onClick={handleFavoriteToggle}
-              color={isFavorite ? "secondary" : "primary"}
+
+          {/* Trailer Section */}
+          {anime.trailer && anime.trailer.embed_url && (
+            <Box
+              sx={{
+                mb: 4,
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: 3,
+                background: theme.palette.background.paper,
+                p: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}
             >
-              {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
-            </Button>
-            <Button variant="outlined" size="large">
-              Share
-            </Button>
+              <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold', color: theme.palette.primary.main }}>
+                Trailer
+              </Typography>
+              <Box
+                sx={{
+                  width: '100%',
+                  maxWidth: 600,
+                  aspectRatio: '16/9',
+                  background: '#000',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  boxShadow: 2,
+                }}
+              >
+                <iframe
+                  width="100%"
+                  height="340"
+                  src={anime.trailer.embed_url}
+                  title="Anime Trailer"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ border: 0, width: '100%', height: '100%' }}
+                />
+              </Box>
+            </Box>
+          )}
+
+          {/* Favorite Button or Login Prompt */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            {user ? (
+              <Button 
+                variant={isFavorite ? "contained" : "outlined"} 
+                size="large"
+                startIcon={isFavorite ? <Favorite /> : <FavoriteBorder />}
+                onClick={handleFavoriteToggle}
+                color={isFavorite ? "secondary" : "primary"}
+              >
+                {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                size="large"
+                color="primary"
+                component={Link}
+                to="/auth/login"
+              >
+                Log in to save to Favorites
+              </Button>
+            )}
           </Box>
         </Box>
       </Box>

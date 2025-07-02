@@ -57,14 +57,15 @@ const FavoriteAnimeCard = memo(({
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 20px rgba(0,0,0,0.3)' 
             : '0 4px 20px rgba(0,0,0,0.1)',
-          transition: 'all 0.2s ease-in-out',
+          transition: 'box-shadow 0.3s cubic-bezier(.4,0,.2,1), transform 0.2s cubic-bezier(.4,0,.2,1), background-color 0.2s cubic-bezier(.4,0,.2,1)',
           overflow: 'hidden',
           position: 'relative',
           '&:hover': {
             transform: 'translateY(-4px)',
+            backgroundColor: theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 8px 30px rgba(0,0,0,0.4)' 
-              : '0 8px 30px rgba(0,0,0,0.15)',
+              ? '0 8px 32px rgba(0,0,0,0.35)' 
+              : '0 8px 32px rgba(0,0,0,0.13)',
             '& .anime-image': {
               transform: 'scale(1.03)'
             }
@@ -123,7 +124,7 @@ const FavoriteAnimeCard = memo(({
               right: 0,
               height: '60px',
               background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
             }} />
             
             {/* Score badge */}
